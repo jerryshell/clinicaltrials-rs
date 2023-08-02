@@ -4,10 +4,24 @@ pub mod model;
 
 pub async fn run() -> anyhow::Result<()> {
     let config = get_config();
-    let cond_query = config.cond_query;
+    if config.cond_query.trim() == "" && config.term_query.trim() == "" {
+        return Err(anyhow::anyhow!(
+            "cond_query and term_query cannot be empty at the same time!"
+        ));
+    }
+
+    let mut cond_query = config.cond_query;
+    if cond_query.trim() == "" {
+        cond_query = config.term_query.clone();
+    }
     println!("cond_query: {:?}", cond_query);
-    let term_query = config.term_query;
+
+    let mut term_query = config.term_query;
+    if term_query.trim() == "" {
+        term_query = cond_query.clone();
+    }
     println!("term_query: {:?}", term_query);
+
     let keywords = config.keywords;
     println!("keywords: {:?}", keywords);
     let limit = 5000;
