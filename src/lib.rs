@@ -4,20 +4,20 @@ pub mod model;
 
 pub async fn run() -> anyhow::Result<()> {
     let config = get_config();
-    if config.cond_query.trim() == "" && config.term_query.trim() == "" {
+    if config.cond_query.is_empty() && config.term_query.is_empty() {
         return Err(anyhow::anyhow!(
             "cond_query and term_query cannot be empty at the same time!"
         ));
     }
 
     let mut cond_query = config.cond_query;
-    if cond_query.trim() == "" {
+    if cond_query.is_empty() {
         cond_query = config.term_query.clone();
     }
     println!("cond_query: {:?}", cond_query);
 
     let mut term_query = config.term_query;
-    if term_query.trim() == "" {
+    if term_query.is_empty() {
         term_query = cond_query.clone();
     }
     println!("term_query: {:?}", term_query);
@@ -39,7 +39,7 @@ pub async fn run() -> anyhow::Result<()> {
         limit,
     ))?.to_string();
     println!("cond_url: {}", cond_url);
-    let mut cond_search_result = client
+    let cond_search_result = client
         .get(cond_url)
         .send()
         .await?
@@ -60,7 +60,7 @@ pub async fn run() -> anyhow::Result<()> {
         limit,
     ))?.to_string();
     println!("term_url: {}", term_url);
-    let mut term_search_result = client
+    let term_search_result = client
         .get(term_url)
         .send()
         .await?
@@ -74,17 +74,13 @@ pub async fn run() -> anyhow::Result<()> {
     }
 
     // combine hits
+    let mut cond_hits = cond_search_result.hits.unwrap_or(vec![]);
+    println!("cond_hits: {}", cond_hits.len());
+    let mut term_hits = term_search_result.hits.unwrap_or(vec![]);
+    println!("term_hits: {}", term_hits.len());
     let mut hits = vec![];
-    println!(
-        "cond_search_result.hits.len: {}",
-        cond_search_result.hits.len()
-    );
-    println!(
-        "term_search_result.hits.len: {}",
-        term_search_result.hits.len()
-    );
-    hits.append(&mut cond_search_result.hits);
-    hits.append(&mut term_search_result.hits);
+    hits.append(&mut cond_hits);
+    hits.append(&mut term_hits);
     println!("hints len: {}", hits.len());
     let hits_set = hits.into_iter().collect::<HashSet<model::search::Hit>>();
     println!("hits_set len: {}", hits_set.len());
@@ -96,8 +92,11 @@ pub async fn run() -> anyhow::Result<()> {
 
     let mut result = vec![];
     for item in hits_set {
-        let id = item.id;
+        let id = item.id.unwrap_or("".to_string());
         println!("id: {}", id);
+        if id.is_empty() {
+            continue;
+        }
 
         // get study by id
         let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
@@ -109,11 +108,27 @@ pub async fn run() -> anyhow::Result<()> {
             .json::<model::study::Root>()
             .await?;
 
+        // study
+        if study.study.is_none() {
+            continue;
+        }
+
+        // get protocol_section
+        let protocol_section = study.study.unwrap().protocol_section;
+        if protocol_section.is_none() {
+            continue;
+        }
+        let protocol_section = protocol_section.unwrap();
+
+        // eligibility_module
+        if protocol_section.eligibility_module.is_none() {
+            continue;
+        }
+
         // get eligibility_criteria
-        let eligibility_criteria = study
-            .study
-            .protocol_section
+        let eligibility_criteria = protocol_section
             .eligibility_module
+            .unwrap()
             .eligibility_criteria;
         if eligibility_criteria.is_none() {
             continue;
@@ -128,40 +143,48 @@ pub async fn run() -> anyhow::Result<()> {
         }
 
         // sponsor
-        let sponsor = study
-            .study
-            .protocol_section
-            .sponsor_collaborators_module
-            .lead_sponsor
-            .name
-            .unwrap_or("-".to_string());
+        let sponsor = match protocol_section.sponsor_collaborators_module {
+            Some(sponsor_collaborators_module) => match sponsor_collaborators_module.lead_sponsor {
+                Some(lead_sponsor) => match lead_sponsor.name {
+                    Some(name) => name,
+                    None => "-".to_string(),
+                },
+                None => "-".to_string(),
+            },
+            None => "-".to_string(),
+        };
 
         // start_date
-        let start_date = match study.study.protocol_section.status_module.start_date_struct {
-            Some(d) => d.date,
+        let start_date = match &protocol_section.status_module {
+            Some(status_module) => match &status_module.start_date_struct {
+                Some(start_date_struct) => match &start_date_struct.date {
+                    Some(date) => date.to_string(),
+                    None => "-".to_string(),
+                },
+                None => "-".to_string(),
+            },
             None => "-".to_string(),
         };
 
         // completion_date
-        let completion_date = match study
-            .study
-            .protocol_section
-            .status_module
-            .completion_date_struct
-        {
-            Some(d) => d.date,
+        let completion_date = match &protocol_section.status_module {
+            Some(status_module) => match &status_module.completion_date_struct {
+                Some(completion_date_struct) => match &completion_date_struct.date {
+                    Some(date) => date.to_string(),
+                    None => "-".to_string(),
+                },
+                None => "-".to_string(),
+            },
             None => "-".to_string(),
         };
 
         // drug
         let mut drug_list = vec![];
-        if let Some(arms_interventions_module) =
-            study.study.protocol_section.arms_interventions_module
-        {
+        if let Some(arms_interventions_module) = protocol_section.arms_interventions_module {
             if let Some(interventions) = arms_interventions_module.interventions {
                 for item in interventions {
-                    if let Some(type_filed) = item.type_field {
-                        if "DRUG" == type_filed {
+                    if let Some(intervention_type) = item.intervention_type {
+                        if "DRUG" == intervention_type {
                             if let Some(name) = item.name {
                                 drug_list.push(name);
                             }
@@ -170,19 +193,6 @@ pub async fn run() -> anyhow::Result<()> {
                 }
             }
         }
-        // match study.study.protocol_section.arms_interventions_module {
-        //     Some(arms_interventions_module) => match arms_interventions_module.interventions {
-        //         Some(interventions) => {
-        //             for item in interventions {
-        //                 if "DRUG" == item.type_field {
-        //                     drug_list.push(item.name);
-        //                 }
-        //             }
-        //         }
-        //         None => {}
-        //     },
-        //     None => {}
-        // }
         let drug = drug_list.join(",");
 
         let csv_item = model::csv_item::CsvItem {
