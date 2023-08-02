@@ -47,9 +47,9 @@ pub async fn run() -> anyhow::Result<()> {
         .await?;
     // println!("{:#?}", cond_search_result);
     {
-        println!("save cond.json");
-        let mut file = std::fs::File::create("cond.json")?;
-        serde_json::to_writer_pretty(&mut file, &cond_search_result)?;
+        // println!("save cond.json");
+        // let mut file = std::fs::File::create("cond.json")?;
+        // serde_json::to_writer_pretty(&mut file, &cond_search_result)?;
     }
 
     // download term.json
@@ -68,9 +68,9 @@ pub async fn run() -> anyhow::Result<()> {
         .await?;
     // println!("{:#?}", term_search_result);
     {
-        println!("save term.json");
-        let mut file = std::fs::File::create("term.json")?;
-        serde_json::to_writer_pretty(&mut file, &term_search_result)?;
+        // println!("save term.json");
+        // let mut file = std::fs::File::create("term.json")?;
+        // serde_json::to_writer_pretty(&mut file, &term_search_result)?;
     }
 
     // combine hits
@@ -133,7 +133,15 @@ pub async fn run() -> anyhow::Result<()> {
         if eligibility_criteria.is_none() {
             continue;
         }
-        let eligibility_criteria = eligibility_criteria.unwrap();
+        let mut eligibility_criteria = eligibility_criteria.unwrap();
+
+        // Exclusion Criteria filter
+        // let split = eligibility_criteria
+        //     .split("Exclusion Criteria:")
+        //     .collect::<Vec<&str>>();
+        // if split.len() >= 2 {
+        //     eligibility_criteria = split.first().copied().unwrap_or("").to_string();
+        // }
 
         // keywords filter
         let contains_any_keyword_flag = keywords.iter().any(|k| eligibility_criteria.contains(k));

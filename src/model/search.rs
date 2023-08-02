@@ -61,13 +61,19 @@ pub struct Cancer {
     pub count: Option<i64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hit {
     pub id: Option<String>,
     pub study: Option<Study>,
     pub columns: Option<Columns>,
     pub is_new: Option<bool>,
+}
+
+impl std::cmp::PartialEq for Hit {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl std::cmp::Eq for Hit {}
