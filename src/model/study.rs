@@ -5,33 +5,33 @@ use serde_derive::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct Root {
     pub study: Study,
-    pub topics: Topics,
-    pub history: History,
+    // pub topics: Topics,
+    // pub history: History,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Study {
     pub protocol_section: ProtocolSection,
-    pub derived_section: DerivedSection,
-    pub has_results: bool,
+    // pub derived_section: DerivedSection,
+    // pub has_results: bool,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProtocolSection {
-    pub identification_module: IdentificationModule,
+    // pub identification_module: IdentificationModule,
     pub status_module: StatusModule,
     pub sponsor_collaborators_module: SponsorCollaboratorsModule,
-    pub oversight_module: OversightModule,
-    pub description_module: DescriptionModule,
-    pub conditions_module: ConditionsModule,
-    pub design_module: DesignModule,
-    pub arms_interventions_module: ArmsInterventionsModule,
-    pub outcomes_module: OutcomesModule,
+    // pub oversight_module: OversightModule,
+    // pub description_module: DescriptionModule,
+    // pub conditions_module: ConditionsModule,
+    // pub design_module: DesignModule,
+    pub arms_interventions_module: Option<ArmsInterventionsModule>,
+    // pub outcomes_module: OutcomesModule,
     pub eligibility_module: EligibilityModule,
-    pub contacts_locations_module: ContactsLocationsModule,
-    pub ipd_sharing_statement_module: IpdSharingStatementModule,
+    // pub contacts_locations_module: ContactsLocationsModule,
+    // pub ipd_sharing_statement_module: IpdSharingStatementModule,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -60,17 +60,17 @@ pub struct Organization {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusModule {
-    pub status_verified_date: String,
-    pub overall_status: String,
-    pub expanded_access_info: ExpandedAccessInfo,
-    pub start_date_struct: StartDateStruct,
-    pub primary_completion_date_struct: PrimaryCompletionDateStruct,
-    pub completion_date_struct: CompletionDateStruct,
-    pub study_first_submit_date: String,
-    pub study_first_submit_qc_date: String,
-    pub study_first_post_date_struct: StudyFirstPostDateStruct,
-    pub last_update_submit_date: String,
-    pub last_update_post_date_struct: LastUpdatePostDateStruct,
+    // pub status_verified_date: String,
+    // pub overall_status: String,
+    // pub expanded_access_info: ExpandedAccessInfo,
+    pub start_date_struct: Option<StartDateStruct>,
+    // pub primary_completion_date_struct: PrimaryCompletionDateStruct,
+    pub completion_date_struct: Option<CompletionDateStruct>,
+    // pub study_first_submit_date: String,
+    // pub study_first_submit_qc_date: String,
+    // pub study_first_post_date_struct: StudyFirstPostDateStruct,
+    // pub last_update_submit_date: String,
+    // pub last_update_post_date_struct: LastUpdatePostDateStruct,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -84,7 +84,7 @@ pub struct ExpandedAccessInfo {
 pub struct StartDateStruct {
     pub date: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -92,7 +92,7 @@ pub struct StartDateStruct {
 pub struct PrimaryCompletionDateStruct {
     pub date: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -122,7 +122,7 @@ pub struct LastUpdatePostDateStruct {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SponsorCollaboratorsModule {
-    pub responsible_party: ResponsibleParty,
+    // pub responsible_party: ResponsibleParty,
     pub lead_sponsor: LeadSponsor,
 }
 
@@ -198,8 +198,8 @@ pub struct EnrollmentInfo {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArmsInterventionsModule {
-    pub arm_groups: Vec<ArmGroup>,
-    pub interventions: Vec<Intervention>,
+    // pub arm_groups: Vec<ArmGroup>,
+    pub interventions: Option<Vec<Intervention>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -218,8 +218,8 @@ pub struct Intervention {
     #[serde(rename = "type")]
     pub type_field: String,
     pub name: String,
-    pub description: String,
-    pub arm_group_labels: Vec<String>,
+    // pub description: String,
+    // pub arm_group_labels: Vec<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -249,11 +249,11 @@ pub struct SecondaryOutcome {
 #[serde(rename_all = "camelCase")]
 pub struct EligibilityModule {
     pub eligibility_criteria: String,
-    pub healthy_volunteers: bool,
-    pub sex: String,
-    pub gender_based: bool,
-    pub minimum_age: String,
-    pub std_ages: Vec<String>,
+    // pub healthy_volunteers: bool,
+    // pub sex: String,
+    // pub gender_based: bool,
+    // pub minimum_age: String,
+    // pub std_ages: Vec<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
