@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cond_query = "CPRC";
@@ -17,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
         limit,
     );
     println!("cond_url: {}", cond_url);
-    let cond_search_result = client
+    let mut cond_search_result = client
         .get(cond_url)
         .send()
         .await?
@@ -38,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         limit,
     );
     println!("term_url: {}", term_url);
-    let term_search_result = client
+    let mut term_search_result = client
         .get(term_url)
         .send()
         .await?
@@ -50,5 +52,22 @@ async fn main() -> anyhow::Result<()> {
         let mut file = std::fs::File::create("term.json")?;
         serde_json::to_writer_pretty(&mut file, &term_search_result)?;
     }
+
+    // combine hits
+    let mut hits = vec![];
+    println!(
+        "cond_search_result.hits.len: {}",
+        cond_search_result.hits.len()
+    );
+    println!(
+        "term_search_result.hits.len: {}",
+        term_search_result.hits.len()
+    );
+    hits.append(&mut cond_search_result.hits);
+    hits.append(&mut term_search_result.hits);
+    println!("hints len: {}", hits.len());
+    let hits_set: HashSet<clinicaltrials_rs::model::search::Hit> = hits.into_iter().collect();
+    println!("hits_set len: {}", hits_set.len());
+
     Ok(())
 }

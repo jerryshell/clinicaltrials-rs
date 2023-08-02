@@ -23,6 +23,14 @@ pub struct Hit {
     pub is_new: bool,
 }
 
+impl std::cmp::Eq for Hit {}
+
+impl std::hash::Hash for Hit {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Study {
