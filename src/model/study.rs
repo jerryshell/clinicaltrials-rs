@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Root {
     pub study: Option<Study>,
-    pub topics: Option<Topics>,
-    pub history: Option<History>,
+    // pub topics: Option<Topics>,
+    // pub history: Option<History>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,8 +65,8 @@ pub struct AryOutcome {
 #[serde(rename_all = "camelCase")]
 pub struct Study {
     pub protocol_section: Option<ProtocolSection>,
-    pub derived_section: Option<DerivedSection>,
-    pub has_results: Option<bool>,
+    // pub derived_section: Option<DerivedSection>,
+    // pub has_results: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -130,18 +130,18 @@ pub struct ModelPredictions {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProtocolSection {
-    pub identification_module: Option<IdentificationModule>,
+    // pub identification_module: Option<IdentificationModule>,
     pub status_module: Option<StatusModule>,
     pub sponsor_collaborators_module: Option<SponsorCollaboratorsModule>,
-    pub oversight_module: Option<OversightModule>,
-    pub description_module: Option<DescriptionModule>,
-    pub conditions_module: Option<ConditionsModule>,
-    pub design_module: Option<DesignModule>,
+    // pub oversight_module: Option<OversightModule>,
+    // pub description_module: Option<DescriptionModule>,
+    // pub conditions_module: Option<ConditionsModule>,
+    // pub design_module: Option<DesignModule>,
     pub arms_interventions_module: Option<ArmsInterventionsModule>,
-    pub outcomes_module: Option<OutcomesModule>,
+    // pub outcomes_module: Option<OutcomesModule>,
     pub eligibility_module: Option<EligibilityModule>,
-    pub contacts_locations_module: Option<ContactsLocationsModule>,
-    pub ipd_sharing_statement_module: Option<IpdSharingStatementModule>,
+    // pub contacts_locations_module: Option<ContactsLocationsModule>,
+    // pub ipd_sharing_statement_module: Option<IpdSharingStatementModule>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

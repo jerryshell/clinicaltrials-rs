@@ -7,10 +7,10 @@ pub struct Root {
     pub limit: Option<i64>,
     pub total: Option<i64>,
     pub hits: Option<Vec<Hit>>,
-    pub aggs: Option<Aggs>,
-    pub agg_filters: Option<Vec<AggFilter>>,
-    pub signals: Option<Signals>,
-    pub profile_results: Option<ProfileResults>,
+    // pub aggs: Option<Aggs>,
+    // pub agg_filters: Option<Vec<AggFilter>>,
+    // pub signals: Option<Signals>,
+    // pub profile_results: Option<ProfileResults>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,9 +65,9 @@ pub struct Cancer {
 #[serde(rename_all = "camelCase")]
 pub struct Hit {
     pub id: Option<String>,
-    pub study: Option<Study>,
-    pub columns: Option<Columns>,
-    pub is_new: Option<bool>,
+    // pub study: Option<Study>,
+    // pub columns: Option<Columns>,
+    // pub is_new: Option<bool>,
 }
 
 impl std::cmp::PartialEq for Hit {
