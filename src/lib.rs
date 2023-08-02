@@ -85,9 +85,9 @@ pub async fn run() -> anyhow::Result<()> {
     let hits_set = hits.into_iter().collect::<HashSet<model::search::Hit>>();
     println!("hits_set len: {}", hits_set.len());
     {
-        println!("save combine.json");
-        let mut file = std::fs::File::create("combine.json")?;
-        serde_json::to_writer_pretty(&mut file, &hits_set)?;
+        // println!("save combine.json");
+        // let mut file = std::fs::File::create("combine.json")?;
+        // serde_json::to_writer_pretty(&mut file, &hits_set)?;
     }
 
     let mut result = vec![];
@@ -101,12 +101,17 @@ pub async fn run() -> anyhow::Result<()> {
         // get study by id
         let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
         println!("study_url: {}", study_url);
-        let study = client
-            .get(study_url)
-            .send()
-            .await?
-            .json::<model::study::Root>()
-            .await?;
+        let send_result = client.get(study_url).send().await;
+        if send_result.is_err() {
+            println!("{:#?}", send_result.unwrap_err());
+            continue;
+        }
+        let json_result = send_result.unwrap().json::<model::study::Root>().await;
+        if json_result.is_err() {
+            println!("{:#?}", json_result.unwrap_err());
+            continue;
+        }
+        let study = json_result.unwrap();
 
         // study
         if study.study.is_none() {
@@ -136,12 +141,12 @@ pub async fn run() -> anyhow::Result<()> {
         let mut eligibility_criteria = eligibility_criteria.unwrap();
 
         // Exclusion Criteria filter
-        // let split = eligibility_criteria
-        //     .split("Exclusion Criteria:")
-        //     .collect::<Vec<&str>>();
-        // if split.len() >= 2 {
-        //     eligibility_criteria = split.first().copied().unwrap_or("").to_string();
-        // }
+        let split = eligibility_criteria
+            .split("Exclusion Criteria:")
+            .collect::<Vec<&str>>();
+        if split.len() >= 2 {
+            eligibility_criteria = split.first().copied().unwrap_or("").to_string();
+        }
 
         // keywords filter
         let contains_any_keyword_flag = keywords.iter().any(|k| eligibility_criteria.contains(k));
