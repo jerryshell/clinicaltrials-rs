@@ -1,0 +1,20 @@
+[package]
+name = "clinicaltrials-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { version = "0", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+tokio = { version = "1", features = ["full"] }
+serde = "1"
+serde_json = "1"
+serde_derive = "1"
+csv = "1"
+anyhow = "1"
+
+[profile.release]
+lto = true
+strip = true
