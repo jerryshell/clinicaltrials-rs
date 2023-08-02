@@ -18,9 +18,9 @@ pub struct Root {
 #[serde(rename_all = "camelCase")]
 pub struct Hit {
     pub id: String,
-    pub study: Study,
-    pub columns: Columns,
-    pub is_new: bool,
+    // pub study: Study,
+    // pub columns: Columns,
+    // pub is_new: bool,
 }
 
 impl std::cmp::Eq for Hit {}
@@ -42,15 +42,15 @@ pub struct Study {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProtocolSection {
-    pub identification_module: IdentificationModule,
-    pub status_module: StatusModule,
-    pub sponsor_collaborators_module: SponsorCollaboratorsModule,
-    pub conditions_module: ConditionsModule,
-    pub design_module: DesignModule,
-    pub arms_interventions_module: Option<ArmsInterventionsModule>,
-    pub outcomes_module: Option<OutcomesModule>,
-    pub eligibility_module: EligibilityModule,
-    pub contacts_locations_module: Option<ContactsLocationsModule>,
+    // pub identification_module: IdentificationModule,
+    // pub status_module: StatusModule,
+    // pub sponsor_collaborators_module: SponsorCollaboratorsModule,
+    // pub conditions_module: ConditionsModule,
+    // pub design_module: DesignModule,
+    // pub arms_interventions_module: Option<ArmsInterventionsModule>,
+    // pub outcomes_module: Option<OutcomesModule>,
+    // pub eligibility_module: EligibilityModule,
+    // pub contacts_locations_module: Option<ContactsLocationsModule>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -136,7 +136,7 @@ pub struct SponsorCollaboratorsModule {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LeadSponsor {
-    pub name: String,
+    pub name: Option<String>,
     pub class: String,
 }
 
@@ -199,7 +199,7 @@ pub struct ArmsInterventionsModule {
 pub struct Intervention {
     #[serde(rename = "type")]
     pub type_field: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -274,7 +274,7 @@ pub struct GeoPoint {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CentralContact {
-    pub name: String,
+    pub name: Option<String>,
     pub role: String,
     pub phone: Option<String>,
     pub email: Option<String>,
@@ -320,7 +320,7 @@ pub struct Interventions {
 pub struct Item {
     #[serde(rename = "type")]
     pub type_field: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

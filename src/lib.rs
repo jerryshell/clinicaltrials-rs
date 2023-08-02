@@ -33,11 +33,11 @@ pub async fn run() -> anyhow::Result<()> {
 
     // download cond.json
     println!("search query.cond");
-    let cond_url = format!(
+    let cond_url = url::Url::parse(&format!(
         "https://www.clinicaltrials.gov/api/int/studies?query.cond={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
         cond_query,
         limit,
-    );
+    ))?.to_string();
     println!("cond_url: {}", cond_url);
     let mut cond_search_result = client
         .get(cond_url)
@@ -54,11 +54,11 @@ pub async fn run() -> anyhow::Result<()> {
 
     // download term.json
     println!("search query.term");
-    let term_url = format!(
+    let term_url = url::Url::parse(&format!(
         "https://www.clinicaltrials.gov/api/int/studies?query.term={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
         term_query,
         limit,
-    );
+    ))?.to_string();
     println!("term_url: {}", term_url);
     let mut term_search_result = client
         .get(term_url)
@@ -115,6 +115,10 @@ pub async fn run() -> anyhow::Result<()> {
             .protocol_section
             .eligibility_module
             .eligibility_criteria;
+        if eligibility_criteria.is_none() {
+            continue;
+        }
+        let eligibility_criteria = eligibility_criteria.unwrap();
 
         // keywords filter
         let contains_any_keyword_flag = keywords.iter().any(|k| eligibility_criteria.contains(k));
@@ -129,7 +133,8 @@ pub async fn run() -> anyhow::Result<()> {
             .protocol_section
             .sponsor_collaborators_module
             .lead_sponsor
-            .name;
+            .name
+            .unwrap_or("-".to_string());
 
         // start_date
         let start_date = match study.study.protocol_section.status_module.start_date_struct {
@@ -155,8 +160,12 @@ pub async fn run() -> anyhow::Result<()> {
         {
             if let Some(interventions) = arms_interventions_module.interventions {
                 for item in interventions {
-                    if "DRUG" == item.type_field {
-                        drug_list.push(item.name);
+                    if let Some(type_filed) = item.type_field {
+                        if "DRUG" == type_filed {
+                            if let Some(name) = item.name {
+                                drug_list.push(name);
+                            }
+                        }
                     }
                 }
             }

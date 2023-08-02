@@ -53,7 +53,7 @@ pub struct OrgStudyIdInfo {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Organization {
-    pub full_name: String,
+    pub full_name: Option<String>,
     pub class: String,
 }
 
@@ -100,7 +100,7 @@ pub struct PrimaryCompletionDateStruct {
 pub struct CompletionDateStruct {
     pub date: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -108,7 +108,7 @@ pub struct CompletionDateStruct {
 pub struct StudyFirstPostDateStruct {
     pub date: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -116,7 +116,7 @@ pub struct StudyFirstPostDateStruct {
 pub struct LastUpdatePostDateStruct {
     pub date: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -130,13 +130,13 @@ pub struct SponsorCollaboratorsModule {
 #[serde(rename_all = "camelCase")]
 pub struct ResponsibleParty {
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LeadSponsor {
-    pub name: String,
+    pub name: Option<String>,
     pub class: String,
 }
 
@@ -192,7 +192,7 @@ pub struct MaskingInfo {
 pub struct EnrollmentInfo {
     pub count: i64,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -207,7 +207,7 @@ pub struct ArmsInterventionsModule {
 pub struct ArmGroup {
     pub label: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
     pub description: String,
     pub intervention_names: Vec<String>,
 }
@@ -216,8 +216,8 @@ pub struct ArmGroup {
 #[serde(rename_all = "camelCase")]
 pub struct Intervention {
     #[serde(rename = "type")]
-    pub type_field: String,
-    pub name: String,
+    pub type_field: Option<String>,
+    pub name: Option<String>,
     // pub description: String,
     // pub arm_group_labels: Vec<String>,
 }
@@ -248,7 +248,7 @@ pub struct SecondaryOutcome {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EligibilityModule {
-    pub eligibility_criteria: String,
+    pub eligibility_criteria: Option<String>,
     // pub healthy_volunteers: bool,
     // pub sex: String,
     // pub gender_based: bool,
@@ -266,7 +266,7 @@ pub struct ContactsLocationsModule {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OverallOfficial {
-    pub name: String,
+    pub name: Option<String>,
     pub affiliation: String,
     pub role: String,
 }
@@ -350,7 +350,7 @@ pub struct Ancestor {
 #[serde(rename_all = "camelCase")]
 pub struct BrowseLefe {
     pub id: String,
-    pub name: String,
+    pub name: Option<String>,
     pub as_found: Option<String>,
     pub relevance: String,
 }
@@ -359,7 +359,7 @@ pub struct BrowseLefe {
 #[serde(rename_all = "camelCase")]
 pub struct BrowseBranch {
     pub abbrev: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -373,7 +373,7 @@ pub struct InterventionBrowseModule {
 #[serde(rename_all = "camelCase")]
 pub struct BrowseLefe2 {
     pub id: String,
-    pub name: String,
+    pub name: Option<String>,
     pub relevance: String,
 }
 
@@ -381,7 +381,7 @@ pub struct BrowseLefe2 {
 #[serde(rename_all = "camelCase")]
 pub struct BrowseBranch2 {
     pub abbrev: String,
-    pub name: String,
+    pub name: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -396,14 +396,14 @@ pub struct Topics {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ghr {
-    pub name: String,
+    pub name: Option<String>,
     pub url: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MedlinePlu {
-    pub name: String,
+    pub name: Option<String>,
     pub url: String,
 }
 
@@ -449,7 +449,7 @@ pub struct PrimaryOutcome2 {
 pub struct EnrollmentInfo2 {
     pub count: i64,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub type_field: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
