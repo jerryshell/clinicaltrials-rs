@@ -4,13 +4,15 @@ pub mod model;
 
 pub async fn run() -> anyhow::Result<()> {
     let config = get_config();
+    println!("query: {:#?}", config);
+
     if config.query.is_empty() {
         return Err(anyhow::anyhow!("query cannot be empty!"));
     }
-    println!("query: {:?}", config.query);
 
-    let keywords = config.keywords;
-    println!("keywords: {:?}", keywords);
+    if config.keywords.is_empty() {
+        return Err(anyhow::anyhow!("keywords cannot be empty!"));
+    }
 
     let client = reqwest::Client::builder()
         .user_agent("Chrome/96.0.4664.110")
@@ -78,7 +80,10 @@ pub async fn run() -> anyhow::Result<()> {
         }
 
         // keywords filter
-        let contains_any_keyword_flag = keywords.iter().any(|k| eligibility_criteria.contains(k));
+        let contains_any_keyword_flag = config
+            .keywords
+            .iter()
+            .any(|k| eligibility_criteria.contains(k));
         println!("contains_any_keyword_flag: {}", contains_any_keyword_flag);
         if !contains_any_keyword_flag {
             continue;
@@ -146,6 +151,15 @@ pub async fn run() -> anyhow::Result<()> {
             None => "-",
         };
 
+        // conditions
+        let conditions = match &protocol_section.conditions_module {
+            Some(conditions_module) => match &conditions_module.conditions {
+                Some(conditions) => conditions.join(","),
+                None => "-".to_string(),
+            },
+            None => "-".to_string(),
+        };
+
         // drug
         let mut drug_list = vec![];
         if let Some(arms_interventions_module) = protocol_section.arms_interventions_module {
@@ -171,6 +185,7 @@ pub async fn run() -> anyhow::Result<()> {
             completion_date: format!("\t{}", completion_date),
             status: format!("\t{}", status),
             phase: format!("\t{}", phase),
+            conditions: format!("\t{}", conditions),
             drug: format!("\t{}", drug),
         };
 
@@ -267,6 +282,7 @@ pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Res
         "completion_date",
         "status",
         "phase",
+        "conditions",
         "drug",
     ])?;
 
@@ -278,6 +294,7 @@ pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Res
             research_report.completion_date.to_string(),
             research_report.status.to_string(),
             research_report.phase.to_string(),
+            research_report.conditions.to_string(),
             research_report.drug.to_string(),
         ])?;
     }

@@ -135,7 +135,7 @@ pub struct ProtocolSection {
     pub sponsor_collaborators_module: Option<SponsorCollaboratorsModule>,
     // pub oversight_module: Option<OversightModule>,
     // pub description_module: Option<DescriptionModule>,
-    // pub conditions_module: Option<ConditionsModule>,
+    pub conditions_module: Option<ConditionsModule>,
     pub design_module: Option<DesignModule>,
     pub arms_interventions_module: Option<ArmsInterventionsModule>,
     // pub outcomes_module: Option<OutcomesModule>,
@@ -174,7 +174,7 @@ pub struct Intervention {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConditionsModule {
     pub conditions: Option<Vec<String>>,
-    pub keywords: Option<Vec<String>>,
+    // pub keywords: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

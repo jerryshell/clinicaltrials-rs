@@ -8,5 +8,6 @@ pub struct CsvItem {
     pub completion_date: String,
     pub status: String,
     pub phase: String,
+    pub conditions: String,
     pub drug: String,
 }
