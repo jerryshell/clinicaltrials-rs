@@ -208,12 +208,13 @@ pub async fn run() -> anyhow::Result<()> {
         }
         let drug = drug_list.join(",");
 
+        // add \t for stupid excel !!!
         let csv_item = model::csv_item::CsvItem {
-            id,
-            sponsor,
-            start_date,
-            completion_date,
-            drug,
+            id: format!("\t{}", id),
+            sponsor: format!("\t{}", sponsor),
+            start_date: format!("\t{}", start_date),
+            completion_date: format!("\t{}", completion_date),
+            drug: format!("\t{}", drug),
         };
 
         result.push(csv_item);
