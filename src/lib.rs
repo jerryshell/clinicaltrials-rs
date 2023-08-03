@@ -3,7 +3,7 @@ use std::collections::HashSet;
 pub mod model;
 
 pub async fn run() -> anyhow::Result<()> {
-    let config = get_config();
+    let mut config = get_config();
     println!("query: {:#?}", config);
 
     if config.query.is_empty() {
@@ -14,6 +14,12 @@ pub async fn run() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("keywords cannot be empty!"));
     }
 
+    // config.keywords to_lowercase
+    config
+        .keywords
+        .iter_mut()
+        .for_each(|k| *k = k.to_lowercase());
+
     let client = reqwest::Client::builder()
         .user_agent("Chrome/96.0.4664.110")
         .build()
@@ -23,6 +29,8 @@ pub async fn run() -> anyhow::Result<()> {
 
     let mut result = vec![];
     for item in hits_set {
+        let mut add_to_result = false;
+
         let id = item.id.unwrap_or("".to_string());
         println!("id: {}", id);
         if id.is_empty() {
@@ -49,44 +57,47 @@ pub async fn run() -> anyhow::Result<()> {
             continue;
         }
 
-        // get protocol_section
+        // protocol_section
         let protocol_section = study.study.unwrap().protocol_section;
         if protocol_section.is_none() {
             continue;
         }
         let protocol_section = protocol_section.unwrap();
 
-        // eligibility_module
-        if protocol_section.eligibility_module.is_none() {
-            continue;
-        }
-
-        // get eligibility_criteria
-        let eligibility_criteria = protocol_section
-            .eligibility_module
-            .unwrap()
-            .eligibility_criteria;
-        if eligibility_criteria.is_none() {
-            continue;
-        }
-        let mut eligibility_criteria = eligibility_criteria.unwrap();
-
-        // Exclusion Criteria filter
-        let split = eligibility_criteria
+        // eligibility_criteria
+        let eligibility_criteria = match &protocol_section.eligibility_module {
+            Some(eligibility_module) => match &eligibility_module.eligibility_criteria {
+                Some(eligibility_criteria) => eligibility_criteria,
+                None => "",
+            },
+            None => "",
+        };
+        let eligibility_criteria = eligibility_criteria.to_lowercase();
+        let eligibility_criteria_split = eligibility_criteria
             .split("Exclusion Criteria:")
             .collect::<Vec<&str>>();
-        if split.len() >= 2 {
-            eligibility_criteria = split.first().copied().unwrap_or("").to_string();
+        let (inclusion_criteria, exclusion_criteria) = if eligibility_criteria_split.len() == 2 {
+            (eligibility_criteria_split[0], eligibility_criteria_split[1])
+        } else {
+            (eligibility_criteria.as_str(), "")
+        };
+
+        // inclusion_criteria filter
+        if config.keywords_in_inclusion {
+            add_to_result = config
+                .keywords
+                .iter()
+                .any(|k| inclusion_criteria.contains(k))
+                || add_to_result;
         }
 
-        // keywords filter
-        let contains_any_keyword_flag = config
-            .keywords
-            .iter()
-            .any(|k| eligibility_criteria.contains(k));
-        println!("contains_any_keyword_flag: {}", contains_any_keyword_flag);
-        if !contains_any_keyword_flag {
-            continue;
+        // exclusion_criteria filter
+        if config.keywords_in_exclusion {
+            add_to_result = config
+                .keywords
+                .iter()
+                .any(|k| exclusion_criteria.contains(k))
+                || add_to_result;
         }
 
         // sponsor
@@ -160,6 +171,11 @@ pub async fn run() -> anyhow::Result<()> {
             None => "-".to_string(),
         };
 
+        // conditions filter
+        if config.keywords_in_conditions {
+            add_to_result = config.keywords.iter().any(|k| conditions.contains(k)) || add_to_result;
+        }
+
         // drug
         let mut drug_list = vec![];
         if let Some(arms_interventions_module) = protocol_section.arms_interventions_module {
@@ -189,7 +205,10 @@ pub async fn run() -> anyhow::Result<()> {
             drug: format!("\t{}", drug),
         };
 
-        result.push(csv_item);
+        println!("match: {}", add_to_result);
+        if add_to_result {
+            result.push(csv_item);
+        }
     }
 
     println!("write to csv ...");
