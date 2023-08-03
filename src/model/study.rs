@@ -136,7 +136,7 @@ pub struct ProtocolSection {
     // pub oversight_module: Option<OversightModule>,
     // pub description_module: Option<DescriptionModule>,
     // pub conditions_module: Option<ConditionsModule>,
-    // pub design_module: Option<DesignModule>,
+    pub design_module: Option<DesignModule>,
     pub arms_interventions_module: Option<ArmsInterventionsModule>,
     // pub outcomes_module: Option<OutcomesModule>,
     pub eligibility_module: Option<EligibilityModule>,
@@ -218,10 +218,10 @@ pub struct DescriptionModule {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DesignModule {
-    pub study_type: Option<String>,
+    // pub study_type: Option<String>,
     pub phases: Option<Vec<String>>,
-    pub design_info: Option<DesignInfo>,
-    pub enrollment_info: Option<EnrollmentInfo>,
+    // pub design_info: Option<DesignInfo>,
+    // pub enrollment_info: Option<EnrollmentInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

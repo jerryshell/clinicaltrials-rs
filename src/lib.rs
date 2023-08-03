@@ -31,13 +31,13 @@ pub async fn run() -> anyhow::Result<()> {
         let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
         println!("study_url: {}", study_url);
         let send_result = client.get(study_url).send().await;
-        if send_result.is_err() {
-            println!("{:#?}", send_result.unwrap_err());
+        if let Err(e) = send_result {
+            println!("{:#?}", e);
             continue;
         }
         let json_result = send_result.unwrap().json::<model::study::Root>().await;
-        if json_result.is_err() {
-            println!("{:#?}", json_result.unwrap_err());
+        if let Err(e) = json_result {
+            println!("{:#?}", e);
             continue;
         }
         let study = json_result.unwrap();
@@ -85,23 +85,16 @@ pub async fn run() -> anyhow::Result<()> {
         }
 
         // sponsor
-        let sponsor = match protocol_section.sponsor_collaborators_module {
-            Some(sponsor_collaborators_module) => match sponsor_collaborators_module.lead_sponsor {
-                Some(lead_sponsor) => match lead_sponsor.name {
-                    Some(name) => name,
-                    None => "-".to_string(),
-                },
-                None => "-".to_string(),
-            },
-            None => "-".to_string(),
-        };
-
-        // status
-        let status = match &protocol_section.status_module {
-            Some(status_module) => match &status_module.overall_status {
-                Some(overall_status) => overall_status,
-                None => "-",
-            },
+        let sponsor = match &protocol_section.sponsor_collaborators_module {
+            Some(sponsor_collaborators_module) => {
+                match &sponsor_collaborators_module.lead_sponsor {
+                    Some(lead_sponsor) => match &lead_sponsor.name {
+                        Some(name) => name,
+                        None => "-",
+                    },
+                    None => "-",
+                }
+            }
             None => "-",
         };
 
@@ -124,6 +117,30 @@ pub async fn run() -> anyhow::Result<()> {
                     Some(date) => date,
                     None => "-",
                 },
+                None => "-",
+            },
+            None => "-",
+        };
+
+        // status
+        let status = match &protocol_section.status_module {
+            Some(status_module) => match &status_module.overall_status {
+                Some(overall_status) => overall_status,
+                None => "-",
+            },
+            None => "-",
+        };
+
+        // phase
+        let phase = match &protocol_section.design_module {
+            Some(design_module) => match &design_module.phases {
+                Some(phases) => {
+                    if phases.is_empty() {
+                        "-"
+                    } else {
+                        &phases[0]
+                    }
+                }
                 None => "-",
             },
             None => "-",
@@ -153,12 +170,14 @@ pub async fn run() -> anyhow::Result<()> {
             start_date: format!("\t{}", start_date),
             completion_date: format!("\t{}", completion_date),
             status: format!("\t{}", status),
+            phase: format!("\t{}", phase),
             drug: format!("\t{}", drug),
         };
 
         result.push(csv_item);
     }
 
+    println!("write to csv ...");
     write_to_csv(&result).await?;
 
     Ok(())
@@ -239,8 +258,6 @@ pub async fn get_study_hits_by_query(
 }
 
 pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Result<()> {
-    println!("write to csv...");
-
     let mut csv_writer = csv::Writer::from_path("data.csv")?;
 
     csv_writer.write_record([
@@ -249,6 +266,7 @@ pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Res
         "start_date",
         "completion_date",
         "status",
+        "phase",
         "drug",
     ])?;
 
@@ -258,6 +276,8 @@ pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Res
             research_report.sponsor.to_string(),
             research_report.start_date.to_string(),
             research_report.completion_date.to_string(),
+            research_report.status.to_string(),
+            research_report.phase.to_string(),
             research_report.drug.to_string(),
         ])?;
     }
