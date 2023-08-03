@@ -1,8 +1,10 @@
 {
-    "cond_query": "Castration Resistant Prostate Cancer",
-    "term_query": "Castration Resistant Prostate Cancer",
+    "query": "CRPC",
     "keywords": [
         "enzalutamide",
         "abiraterone"
-    ]
+    ],
+    "keywords_in_inclusion": true,
+    "keywords_in_exclusion": false,
+    "keywords_in_conditions": false
 }

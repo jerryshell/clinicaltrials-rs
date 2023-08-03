@@ -4,91 +4,20 @@ pub mod model;
 
 pub async fn run() -> anyhow::Result<()> {
     let config = get_config();
-    if config.cond_query.is_empty() && config.term_query.is_empty() {
-        return Err(anyhow::anyhow!(
-            "cond_query and term_query cannot be empty at the same time!"
-        ));
+    if config.query.is_empty() {
+        return Err(anyhow::anyhow!("query cannot be empty!"));
     }
-
-    let mut cond_query = config.cond_query;
-    if cond_query.is_empty() {
-        cond_query = config.term_query.clone();
-    }
-    println!("cond_query: {:?}", cond_query);
-
-    let mut term_query = config.term_query;
-    if term_query.is_empty() {
-        term_query = cond_query.clone();
-    }
-    println!("term_query: {:?}", term_query);
+    println!("query: {:?}", config.query);
 
     let keywords = config.keywords;
     println!("keywords: {:?}", keywords);
-    let limit = 5000;
 
     let client = reqwest::Client::builder()
         .user_agent("Chrome/96.0.4664.110")
         .build()
         .unwrap();
 
-    // download cond.json
-    println!("search query.cond");
-    let cond_url = url::Url::parse(&format!(
-        "https://www.clinicaltrials.gov/api/int/studies?query.cond={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
-        cond_query,
-        limit,
-    ))?.to_string();
-    println!("cond_url: {}", cond_url);
-    let cond_search_result = client
-        .get(cond_url)
-        .send()
-        .await?
-        .json::<model::search::Root>()
-        .await?;
-    // println!("{:#?}", cond_search_result);
-    {
-        // println!("save cond.json");
-        // let mut file = std::fs::File::create("cond.json")?;
-        // serde_json::to_writer_pretty(&mut file, &cond_search_result)?;
-    }
-
-    // download term.json
-    println!("search query.term");
-    let term_url = url::Url::parse(&format!(
-        "https://www.clinicaltrials.gov/api/int/studies?query.term={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
-        term_query,
-        limit,
-    ))?.to_string();
-    println!("term_url: {}", term_url);
-    let term_search_result = client
-        .get(term_url)
-        .send()
-        .await?
-        .json::<model::search::Root>()
-        .await?;
-    // println!("{:#?}", term_search_result);
-    {
-        // println!("save term.json");
-        // let mut file = std::fs::File::create("term.json")?;
-        // serde_json::to_writer_pretty(&mut file, &term_search_result)?;
-    }
-
-    // combine hits
-    let mut cond_hits = cond_search_result.hits.unwrap_or(vec![]);
-    println!("cond_hits: {}", cond_hits.len());
-    let mut term_hits = term_search_result.hits.unwrap_or(vec![]);
-    println!("term_hits: {}", term_hits.len());
-    let mut hits = vec![];
-    hits.append(&mut cond_hits);
-    hits.append(&mut term_hits);
-    println!("hints len: {}", hits.len());
-    let hits_set = hits.into_iter().collect::<HashSet<model::search::Hit>>();
-    println!("hits_set len: {}", hits_set.len());
-    {
-        // println!("save combine.json");
-        // let mut file = std::fs::File::create("combine.json")?;
-        // serde_json::to_writer_pretty(&mut file, &hits_set)?;
-    }
+    let hits_set = get_study_hits_by_query(&client, &config.query).await?;
 
     let mut result = vec![];
     for item in hits_set {
@@ -167,28 +96,37 @@ pub async fn run() -> anyhow::Result<()> {
             None => "-".to_string(),
         };
 
+        // status
+        let status = match &protocol_section.status_module {
+            Some(status_module) => match &status_module.overall_status {
+                Some(overall_status) => overall_status,
+                None => "-",
+            },
+            None => "-",
+        };
+
         // start_date
         let start_date = match &protocol_section.status_module {
             Some(status_module) => match &status_module.start_date_struct {
                 Some(start_date_struct) => match &start_date_struct.date {
-                    Some(date) => date.to_string(),
-                    None => "-".to_string(),
+                    Some(date) => date,
+                    None => "-",
                 },
-                None => "-".to_string(),
+                None => "-",
             },
-            None => "-".to_string(),
+            None => "-",
         };
 
         // completion_date
         let completion_date = match &protocol_section.status_module {
             Some(status_module) => match &status_module.completion_date_struct {
                 Some(completion_date_struct) => match &completion_date_struct.date {
-                    Some(date) => date.to_string(),
-                    None => "-".to_string(),
+                    Some(date) => date,
+                    None => "-",
                 },
-                None => "-".to_string(),
+                None => "-",
             },
-            None => "-".to_string(),
+            None => "-",
         };
 
         // drug
@@ -214,6 +152,7 @@ pub async fn run() -> anyhow::Result<()> {
             sponsor: format!("\t{}", sponsor),
             start_date: format!("\t{}", start_date),
             completion_date: format!("\t{}", completion_date),
+            status: format!("\t{}", status),
             drug: format!("\t{}", drug),
         };
 
@@ -231,12 +170,87 @@ pub fn get_config() -> model::config::Config {
     serde_json::from_reader(reader).expect("config.json serialization failed")
 }
 
+pub async fn get_study_hits_by_query(
+    client: &reqwest::Client,
+    query: &str,
+) -> anyhow::Result<HashSet<model::search::Hit>> {
+    let limit = 10000;
+
+    // cond
+    println!("search query.cond");
+    let cond_url = url::Url::parse(&format!(
+        "https://www.clinicaltrials.gov/api/int/studies?query.cond={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
+        query,
+        limit,
+    ))?.to_string();
+    println!("cond_url: {}", cond_url);
+    let cond_search_result = client
+        .get(cond_url)
+        .send()
+        .await?
+        .json::<model::search::Root>()
+        .await?;
+    // println!("{:#?}", cond_search_result);
+    {
+        // println!("save cond.json");
+        // let mut file = std::fs::File::create("cond.json")?;
+        // serde_json::to_writer_pretty(&mut file, &cond_search_result)?;
+    }
+
+    // term
+    println!("search query.term");
+    let term_url = url::Url::parse(&format!(
+        "https://www.clinicaltrials.gov/api/int/studies?query.term={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
+        query,
+        limit,
+    ))?.to_string();
+    println!("term_url: {}", term_url);
+    let term_search_result = client
+        .get(term_url)
+        .send()
+        .await?
+        .json::<model::search::Root>()
+        .await?;
+    // println!("{:#?}", term_search_result);
+    {
+        // println!("save term.json");
+        // let mut file = std::fs::File::create("term.json")?;
+        // serde_json::to_writer_pretty(&mut file, &term_search_result)?;
+    }
+
+    // combine hits
+    let mut cond_hits = cond_search_result.hits.unwrap_or(vec![]);
+    println!("cond_hits: {}", cond_hits.len());
+    let mut term_hits = term_search_result.hits.unwrap_or(vec![]);
+    println!("term_hits: {}", term_hits.len());
+    let mut hits = vec![];
+    hits.append(&mut cond_hits);
+    hits.append(&mut term_hits);
+    println!("hints len: {}", hits.len());
+    let hits_set = hits.into_iter().collect::<HashSet<model::search::Hit>>();
+    println!("hits_set len: {}", hits_set.len());
+    {
+        // println!("save combine.json");
+        // let mut file = std::fs::File::create("combine.json")?;
+        // serde_json::to_writer_pretty(&mut file, &hits_set)?;
+    }
+
+    Ok(hits_set)
+}
+
 pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Result<()> {
     println!("write to csv...");
 
     let mut csv_writer = csv::Writer::from_path("data.csv")?;
 
-    csv_writer.write_record(["id", "sponsor", "start_date", "completion_date", "drug"])?;
+    csv_writer.write_record([
+        "id",
+        "sponsor",
+        "start_date",
+        "completion_date",
+        "status",
+        "drug",
+    ])?;
 
     for research_report in data_list.iter() {
         csv_writer.write_record(&[

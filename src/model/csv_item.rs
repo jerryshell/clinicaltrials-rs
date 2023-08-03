@@ -6,5 +6,6 @@ pub struct CsvItem {
     pub sponsor: String,
     pub start_date: String,
     pub completion_date: String,
+    pub status: String,
     pub drug: String,
 }
