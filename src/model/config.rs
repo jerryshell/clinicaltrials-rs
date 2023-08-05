@@ -7,4 +7,5 @@ pub struct Config {
     pub keywords_in_inclusion: bool,
     pub keywords_in_exclusion: bool,
     pub keywords_in_conditions: bool,
+    pub tokio_task_sleep: Option<u64>,
 }

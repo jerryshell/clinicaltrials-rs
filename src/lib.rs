@@ -14,9 +14,8 @@ use load_config::*;
 use write_to_csv::*;
 
 pub async fn run() -> Result<()> {
-    // config
-    let mut config = load_config().await?;
-    println!("query: {:#?}", config);
+    let config = Arc::new(load_config().await?);
+    println!("config: {:#?}", config);
     if config.query.is_empty() {
         return Err(anyhow!("query cannot be empty!"));
     }
@@ -24,27 +23,21 @@ pub async fn run() -> Result<()> {
         return Err(anyhow!("keywords cannot be empty!"));
     }
 
-    // config.keywords to_lowercase
-    config
-        .keywords
-        .iter_mut()
-        .for_each(|k| *k = k.to_lowercase());
-    let config = Arc::new(config);
-
     let client = reqwest::Client::builder()
         .user_agent("Chrome/96.0.4664.110")
-        .build()
-        .unwrap();
+        .build()?;
 
     println!("searching ...");
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
 
     let mut tasks = Vec::with_capacity(hits_set.len());
+    let tokio_task_slepp = config.tokio_task_sleep.unwrap_or(300);
     for hit in hits_set {
         let client = client.clone();
         let config = config.clone();
         let task = tokio::spawn(async move { build_csv_item(&client, &config, &hit).await });
         tasks.push(task);
+        tokio::time::sleep(tokio::time::Duration::from_millis(tokio_task_slepp)).await;
     }
 
     let mut results = Vec::with_capacity(tasks.len());
