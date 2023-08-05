@@ -65,14 +65,12 @@ pub async fn run() -> anyhow::Result<()> {
         let protocol_section = protocol_section.unwrap();
 
         // eligibility_criteria
-        let eligibility_criteria = match &protocol_section.eligibility_module {
-            Some(eligibility_module) => match &eligibility_module.eligibility_criteria {
-                Some(eligibility_criteria) => eligibility_criteria,
-                None => "",
-            },
-            None => "",
-        };
-        let eligibility_criteria = eligibility_criteria.to_lowercase();
+        let eligibility_criteria = protocol_section
+            .eligibility_module
+            .as_ref()
+            .and_then(|eligibility_module| eligibility_module.eligibility_criteria.as_deref())
+            .unwrap_or("")
+            .to_lowercase();
         let eligibility_criteria_split = eligibility_criteria
             .split("Exclusion Criteria:")
             .collect::<Vec<&str>>();
@@ -191,7 +189,7 @@ pub async fn run() -> anyhow::Result<()> {
                             None
                         }
                     })
-                    .filter(|x| !x.trim().is_empty())
+                    .filter(|s| !s.trim().is_empty())
                     .collect::<Vec<_>>()
                     .join(",")
             })
