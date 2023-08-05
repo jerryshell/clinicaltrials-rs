@@ -4,6 +4,8 @@ pub mod load_config;
 pub mod model;
 pub mod write_to_csv;
 
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use build_csv_item::*;
@@ -27,6 +29,7 @@ pub async fn run() -> Result<()> {
         .keywords
         .iter_mut()
         .for_each(|k| *k = k.to_lowercase());
+    let config = Arc::new(config);
 
     let client = reqwest::Client::builder()
         .user_agent("Chrome/96.0.4664.110")
@@ -36,16 +39,29 @@ pub async fn run() -> Result<()> {
     println!("searching ...");
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
 
-    let mut result = vec![];
+    let mut tasks = Vec::with_capacity(hits_set.len());
     for hit in hits_set {
-        if let Some(item) = build_csv_item(&client, &config, &hit).await {
-            result.push(item)
+        let client = client.clone();
+        let config = config.clone();
+        let task = tokio::spawn(async move { build_csv_item(&client, &config, &hit).await });
+        tasks.push(task);
+    }
+
+    let mut results = Vec::with_capacity(tasks.len());
+    for task in tasks {
+        match task.await {
+            Ok(o) => {
+                if let Some(csv_item) = o {
+                    results.push(csv_item)
+                }
+            }
+            Err(e) => println!("{:#?}", e),
         }
     }
 
-    result.sort_by(|a, b| a.id.cmp(&b.id));
+    results.sort_by(|a, b| a.id.cmp(&b.id));
     println!("write to csv ...");
-    write_to_csv(&result).await?;
+    write_to_csv(&results).await?;
 
     Ok(())
 }
