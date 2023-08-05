@@ -31,6 +31,7 @@ pub async fn run() -> Result<()> {
         .build()
         .unwrap();
 
+    println!("searching ...");
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
 
     let mut result = vec![];
