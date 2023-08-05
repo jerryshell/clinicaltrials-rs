@@ -178,13 +178,13 @@ pub async fn run() -> anyhow::Result<()> {
 
         // drug
         let mut drug_list = vec![];
-        if let Some(arms_interventions_module) = protocol_section.arms_interventions_module {
-            if let Some(interventions) = arms_interventions_module.interventions {
+        if let Some(arms_interventions_module) = &protocol_section.arms_interventions_module {
+            if let Some(interventions) = &arms_interventions_module.interventions {
                 for item in interventions {
-                    if let Some(intervention_type) = item.intervention_type {
+                    if let Some(intervention_type) = &item.intervention_type {
                         if "DRUG" == intervention_type {
-                            if let Some(name) = item.name {
-                                drug_list.push(name);
+                            if let Some(name) = &item.name {
+                                drug_list.push(name.as_str());
                             }
                         }
                     }
