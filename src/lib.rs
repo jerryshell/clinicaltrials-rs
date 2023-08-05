@@ -177,33 +177,39 @@ pub async fn run() -> anyhow::Result<()> {
         }
 
         // drug
-        let mut drug_list = vec![];
-        if let Some(arms_interventions_module) = &protocol_section.arms_interventions_module {
-            if let Some(interventions) = &arms_interventions_module.interventions {
-                for item in interventions {
-                    if let Some(intervention_type) = &item.intervention_type {
-                        if "DRUG" == intervention_type {
-                            if let Some(name) = &item.name {
-                                drug_list.push(name.as_str());
-                            }
+        let drug = protocol_section
+            .arms_interventions_module
+            .as_ref()
+            .and_then(|arms_interventions_module| arms_interventions_module.interventions.as_ref())
+            .map(|interventions| {
+                interventions
+                    .iter()
+                    .filter_map(|item| {
+                        if item.intervention_type.as_deref() == Some("DRUG") {
+                            item.name.as_deref()
+                        } else {
+                            None
                         }
-                    }
-                }
-            }
-        }
-        let drug = drug_list.join(",");
+                    })
+                    .filter(|x| !x.trim().is_empty())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            })
+            .unwrap_or("".to_string());
 
-        // add \t for stupid excel !!!
         let csv_item = model::csv_item::CsvItem {
-            id: format!("\t{}", id),
-            sponsor: format!("\t{}", sponsor),
-            start_date: format!("\t{}", start_date),
-            completion_date: format!("\t{}", completion_date),
-            status: format!("\t{}", status),
-            phase: format!("\t{}", phase),
-            conditions: format!("\t{}", conditions),
-            drug: format!("\t{}", drug),
+            id,
+            sponsor: sponsor.to_string(),
+            start_date: start_date.to_string(),
+            completion_date: completion_date.to_string(),
+            status: status.to_string(),
+            phase: phase.to_string(),
+            conditions,
+            drug,
         };
+        if "NCT03204812" == csv_item.id {
+            println!("{:#?}", csv_item);
+        }
 
         println!("match: {}", add_to_result);
         if add_to_result {
@@ -211,6 +217,7 @@ pub async fn run() -> anyhow::Result<()> {
         }
     }
 
+    result.sort_by(|a, b| a.id.cmp(&b.id));
     println!("write to csv ...");
     write_to_csv(&result).await?;
 
@@ -305,16 +312,17 @@ pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Res
         "drug",
     ])?;
 
+    // add \t for stupid excel !!!
     for research_report in data_list.iter() {
         csv_writer.write_record(&[
-            research_report.id.to_string(),
-            research_report.sponsor.to_string(),
-            research_report.start_date.to_string(),
-            research_report.completion_date.to_string(),
-            research_report.status.to_string(),
-            research_report.phase.to_string(),
-            research_report.conditions.to_string(),
-            research_report.drug.to_string(),
+            format!("\t{}", research_report.id),
+            format!("\t{}", research_report.sponsor),
+            format!("\t{}", research_report.start_date),
+            format!("\t{}", research_report.completion_date),
+            format!("\t{}", research_report.status),
+            format!("\t{}", research_report.phase),
+            format!("\t{}", research_report.conditions),
+            format!("\t{}", research_report.drug),
         ])?;
     }
 
