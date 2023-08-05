@@ -28,41 +28,47 @@ pub async fn run() -> anyhow::Result<()> {
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
 
     let mut result = vec![];
-    for item in hits_set {
+    for hit in hits_set {
         let mut add_to_result = false;
 
-        let id = item.id.unwrap_or("".to_string());
+        let id = if let Some(id) = hit.id {
+            id.trim().to_string()
+        } else {
+            continue;
+        };
         println!("id: {}", id);
         if id.is_empty() {
             continue;
         }
 
-        // get study by id
+        // study
         let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
         println!("study_url: {}", study_url);
-        let send_result = client.get(study_url).send().await;
-        if let Err(e) = send_result {
-            println!("{:#?}", e);
-            continue;
-        }
-        let json_result = send_result.unwrap().json::<model::study::Root>().await;
-        if let Err(e) = json_result {
-            println!("{:#?}", e);
-            continue;
-        }
-        let study = json_result.unwrap();
-
-        // study
-        if study.study.is_none() {
-            continue;
-        }
+        let send_result = match client.get(study_url).send().await {
+            Ok(response) => response,
+            Err(e) => {
+                println!("{:#?}", e);
+                continue;
+            }
+        };
+        let study = match send_result.json::<model::study::Root>().await {
+            Ok(json) => json,
+            Err(e) => {
+                println!("{:#?}", e);
+                continue;
+            }
+        };
 
         // protocol_section
-        let protocol_section = study.study.unwrap().protocol_section;
-        if protocol_section.is_none() {
+        let protocol_section = if let Some(study) = &study.study {
+            if let Some(protocol_section) = &study.protocol_section {
+                protocol_section
+            } else {
+                continue;
+            }
+        } else {
             continue;
-        }
-        let protocol_section = protocol_section.unwrap();
+        };
 
         // eligibility_criteria
         let eligibility_criteria = protocol_section
