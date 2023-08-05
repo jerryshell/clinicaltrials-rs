@@ -1,17 +1,23 @@
-use std::collections::HashSet;
-
+pub mod get_study_hits_by_query;
+pub mod load_config;
 pub mod model;
+pub mod write_to_csv;
 
-pub async fn run() -> anyhow::Result<()> {
-    let mut config = get_config();
+use anyhow::anyhow;
+use anyhow::Result;
+use get_study_hits_by_query::*;
+use load_config::*;
+use write_to_csv::*;
+
+pub async fn run() -> Result<()> {
+    // config
+    let mut config = load_config().await?;
     println!("query: {:#?}", config);
-
     if config.query.is_empty() {
-        return Err(anyhow::anyhow!("query cannot be empty!"));
+        return Err(anyhow!("query cannot be empty!"));
     }
-
     if config.keywords.is_empty() {
-        return Err(anyhow::anyhow!("keywords cannot be empty!"));
+        return Err(anyhow!("keywords cannot be empty!"));
     }
 
     // config.keywords to_lowercase
@@ -211,9 +217,6 @@ pub async fn run() -> anyhow::Result<()> {
             conditions,
             drug,
         };
-        if "NCT03204812" == csv_item.id {
-            println!("{:#?}", csv_item);
-        }
 
         println!("match: {}", add_to_result);
         if add_to_result {
@@ -224,113 +227,6 @@ pub async fn run() -> anyhow::Result<()> {
     result.sort_by(|a, b| a.id.cmp(&b.id));
     println!("write to csv ...");
     write_to_csv(&result).await?;
-
-    Ok(())
-}
-
-pub fn get_config() -> model::config::Config {
-    let config_file = std::fs::File::open("config.json").expect("Failed to open config.json");
-    let reader = std::io::BufReader::new(config_file);
-    serde_json::from_reader(reader).expect("config.json serialization failed")
-}
-
-pub async fn get_study_hits_by_query(
-    client: &reqwest::Client,
-    query: &str,
-) -> anyhow::Result<HashSet<model::search::Hit>> {
-    let limit = 10000;
-
-    // cond
-    println!("search query.cond");
-    let cond_url = url::Url::parse(&format!(
-        "https://www.clinicaltrials.gov/api/int/studies?query.cond={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
-        query,
-        limit,
-    ))?.to_string();
-    println!("cond_url: {}", cond_url);
-    let cond_search_result = client
-        .get(cond_url)
-        .send()
-        .await?
-        .json::<model::search::Root>()
-        .await?;
-    // println!("{:#?}", cond_search_result);
-    {
-        // println!("save cond.json");
-        // let mut file = std::fs::File::create("cond.json")?;
-        // serde_json::to_writer_pretty(&mut file, &cond_search_result)?;
-    }
-
-    // term
-    println!("search query.term");
-    let term_url = url::Url::parse(&format!(
-        "https://www.clinicaltrials.gov/api/int/studies?query.term={}&agg.synonyms=true&aggFilters=&checkSpell=true&from=0&limit={}&fields=OverallStatus%2CHasResults%2CBriefTitle%2CCondition%2CInterventionType%2CInterventionName%2CLocationFacility%2CLocationCity%2CLocationState%2CLocationCountry%2CLocationStatus%2CLocationZip%2CLocationGeoPoint%2CLocationContactName%2CLocationContactRole%2CLocationContactPhone%2CLocationContactPhoneExt%2CLocationContactEMail%2CCentralContactName%2CCentralContactRole%2CCentralContactPhone%2CCentralContactPhoneExt%2CCentralContactEMail%2CGender%2CMinimumAge%2CMaximumAge%2CStdAge%2CNCTId%2CStudyType%2CLeadSponsorName%2CAcronym%2CEnrollmentCount%2CStartDate%2CPrimaryCompletionDate%2CCompletionDate%2CStudyFirstPostDate%2CResultsFirstPostDate%2CLastUpdatePostDate%2COrgStudyId%2CSecondaryId%2CPhase%2CLargeDocLabel%2CLargeDocFilename%2CPrimaryOutcomeMeasure%2CSecondaryOutcomeMeasure%2CDesignAllocation%2CDesignInterventionModel%2CDesignMasking%2CDesignWhoMasked%2CDesignPrimaryPurpose%2CDesignObservationalModel%2CDesignTimePerspective%2CLeadSponsorClass%2CCollaboratorClass&columns=conditions%2Cinterventions%2Ccollaborators&highlight=true",
-        query,
-        limit,
-    ))?.to_string();
-    println!("term_url: {}", term_url);
-    let term_search_result = client
-        .get(term_url)
-        .send()
-        .await?
-        .json::<model::search::Root>()
-        .await?;
-    // println!("{:#?}", term_search_result);
-    {
-        // println!("save term.json");
-        // let mut file = std::fs::File::create("term.json")?;
-        // serde_json::to_writer_pretty(&mut file, &term_search_result)?;
-    }
-
-    // combine hits
-    let mut cond_hits = cond_search_result.hits.unwrap_or(vec![]);
-    println!("cond_hits: {}", cond_hits.len());
-    let mut term_hits = term_search_result.hits.unwrap_or(vec![]);
-    println!("term_hits: {}", term_hits.len());
-    let mut hits = vec![];
-    hits.append(&mut cond_hits);
-    hits.append(&mut term_hits);
-    println!("hints len: {}", hits.len());
-    let hits_set = hits.into_iter().collect::<HashSet<model::search::Hit>>();
-    println!("hits_set len: {}", hits_set.len());
-    {
-        // println!("save combine.json");
-        // let mut file = std::fs::File::create("combine.json")?;
-        // serde_json::to_writer_pretty(&mut file, &hits_set)?;
-    }
-
-    Ok(hits_set)
-}
-
-pub async fn write_to_csv(data_list: &[model::csv_item::CsvItem]) -> anyhow::Result<()> {
-    let mut csv_writer = csv::Writer::from_path("data.csv")?;
-
-    csv_writer.write_record([
-        "id",
-        "sponsor",
-        "start_date",
-        "completion_date",
-        "status",
-        "phase",
-        "conditions",
-        "drug",
-    ])?;
-
-    // add \t for stupid excel !!!
-    for research_report in data_list.iter() {
-        csv_writer.write_record(&[
-            format!("\t{}", research_report.id),
-            format!("\t{}", research_report.sponsor),
-            format!("\t{}", research_report.start_date),
-            format!("\t{}", research_report.completion_date),
-            format!("\t{}", research_report.status),
-            format!("\t{}", research_report.phase),
-            format!("\t{}", research_report.conditions),
-            format!("\t{}", research_report.drug),
-        ])?;
-    }
-
-    csv_writer.flush()?;
 
     Ok(())
 }
