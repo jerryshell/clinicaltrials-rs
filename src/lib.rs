@@ -29,18 +29,27 @@ pub async fn run() -> Result<()> {
 
     println!("searching ...");
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
+    let hits_set_len = hits_set.len();
 
-    let mut tasks = Vec::with_capacity(hits_set.len());
-    let tokio_task_slepp = config.tokio_task_sleep.unwrap_or(300);
+    let mut tasks = Vec::with_capacity(hits_set_len);
+    let tokio_task_slepp = config.tokio_task_sleep.unwrap_or(200);
+    let mut task_spawn_count = 0;
     for hit in hits_set {
         let client = client.clone();
         let config = config.clone();
         let task = tokio::spawn(async move { build_csv_item(&client, &config, &hit).await });
         tasks.push(task);
+        task_spawn_count += 1;
+        println!(
+            "progress: {}/{} {}%",
+            task_spawn_count,
+            hits_set_len,
+            (task_spawn_count as f32 / hits_set_len as f32) * 100.0f32
+        );
         tokio::time::sleep(tokio::time::Duration::from_millis(tokio_task_slepp)).await;
     }
 
-    let mut results = Vec::with_capacity(tasks.len());
+    let mut results = Vec::with_capacity(hits_set_len);
     for task in tasks {
         match task.await {
             Ok(o) => {

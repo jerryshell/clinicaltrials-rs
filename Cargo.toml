@@ -1,6 +1,6 @@
 [package]
 name = "clinicaltrials-rs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 
 [dependencies]
@@ -16,5 +16,8 @@ anyhow = "1"
 url = "2"
 
 [profile.release]
+opt-level = "z"
 lto = true
+codegen-units = 1
 strip = true
+panic = "abort"
