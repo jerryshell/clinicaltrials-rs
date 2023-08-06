@@ -4,7 +4,7 @@ async fn main() {
 
     match clinicaltrials_rs::run().await {
         Ok(_) => tracing::info!("OK"),
-        Err(e) => tracing::info!("{:#?}", e),
+        Err(e) => tracing::error!("{:#?}", e),
     };
 
     if cfg!(target_os = "windows") {

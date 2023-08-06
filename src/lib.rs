@@ -30,6 +30,7 @@ pub async fn run() -> Result<()> {
     tracing::info!("searching ...");
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
     let hits_set_len = hits_set.len();
+    tracing::info!("hits_set_len: {}", hits_set_len);
 
     let mut tasks = Vec::with_capacity(hits_set_len);
     let tokio_task_sleep = config.tokio_task_sleep.unwrap_or(200);
@@ -50,6 +51,7 @@ pub async fn run() -> Result<()> {
     }
 
     let mut results = Vec::with_capacity(hits_set_len);
+    let mut error_count = 0;
     for task in tasks {
         match task.await {
             Ok(o) => {
@@ -57,9 +59,13 @@ pub async fn run() -> Result<()> {
                     results.push(csv_item)
                 }
             }
-            Err(e) => tracing::info!("{:#?}", e),
+            Err(e) => {
+                error_count += 1;
+                tracing::error!("{:#?}", e);
+            }
         }
     }
+    tracing::info!("error count: {}", error_count);
 
     results.sort_by(|a, b| a.id.cmp(&b.id));
     tracing::info!("write to csv ...");
