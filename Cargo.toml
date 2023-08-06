@@ -1,18 +1,20 @@
 [package]
 name = "clinicaltrials-rs"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
-tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 csv = "1"
-anyhow = "1"
 url = "2"
 
 [profile.release]

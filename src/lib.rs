@@ -15,7 +15,7 @@ use write_to_csv::*;
 
 pub async fn run() -> Result<()> {
     let config = Arc::new(load_config().await?);
-    println!("config: {:#?}", config);
+    tracing::info!("config: {:#?}", config);
     if config.query.is_empty() {
         return Err(anyhow!("query cannot be empty!"));
     }
@@ -27,7 +27,7 @@ pub async fn run() -> Result<()> {
         .user_agent("Chrome/96.0.4664.110")
         .build()?;
 
-    println!("searching ...");
+    tracing::info!("searching ...");
     let hits_set = get_study_hits_by_query(&client, &config.query).await?;
     let hits_set_len = hits_set.len();
 
@@ -40,7 +40,7 @@ pub async fn run() -> Result<()> {
         let task = tokio::spawn(async move { build_csv_item(&client, &config, &hit).await });
         tasks.push(task);
         task_spawn_count += 1;
-        println!(
+        tracing::info!(
             "progress: {}/{} {}%",
             task_spawn_count,
             hits_set_len,
@@ -57,12 +57,12 @@ pub async fn run() -> Result<()> {
                     results.push(csv_item)
                 }
             }
-            Err(e) => println!("{:#?}", e),
+            Err(e) => tracing::info!("{:#?}", e),
         }
     }
 
     results.sort_by(|a, b| a.id.cmp(&b.id));
-    println!("write to csv ...");
+    tracing::info!("write to csv ...");
     write_to_csv(&results).await?;
 
     Ok(())

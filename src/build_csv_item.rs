@@ -10,25 +10,25 @@ pub async fn build_csv_item(
     } else {
         return None;
     };
-    println!("id: {}", id);
+    tracing::info!("id: {}", id);
     if id.is_empty() {
         return None;
     }
 
     // study
     let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
-    println!("study_url: {}", study_url);
+    tracing::info!("study_url: {}", study_url);
     let send_result = match client.get(study_url).send().await {
         Ok(response) => response,
         Err(e) => {
-            println!("{:#?}", e);
+            tracing::info!("{:#?}", e);
             return None;
         }
     };
     let study = match send_result.json::<crate::model::study::Root>().await {
         Ok(json) => json,
         Err(e) => {
-            println!("{:#?}", e);
+            tracing::info!("{:#?}", e);
             return None;
         }
     };
@@ -172,7 +172,7 @@ pub async fn build_csv_item(
         drug,
     };
 
-    println!("match: {}", add_to_result);
+    tracing::info!("match: {}", add_to_result);
 
     if add_to_result {
         return Some(csv_item);

@@ -32,15 +32,15 @@ pub async fn get_study_hits_by_query(
         search_and_get_hits(client, &cond_url),
         search_and_get_hits(client, &term_url),
     )?;
-    println!("cond_hits len: {}", cond_hits.len());
-    println!("term_hits len: {}", term_hits.len());
+    tracing::info!("cond_hits len: {}", cond_hits.len());
+    tracing::info!("term_hits len: {}", term_hits.len());
 
     let mut hits = cond_hits;
     hits.extend(term_hits);
     let hits_set = hits
         .into_iter()
         .collect::<HashSet<crate::model::search::Hit>>();
-    println!("hits_set len: {}", hits_set.len());
+    tracing::info!("hits_set len: {}", hits_set.len());
 
     Ok(hits_set)
 }
