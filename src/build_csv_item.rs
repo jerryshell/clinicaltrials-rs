@@ -1,8 +1,65 @@
+use crate::*;
+use anyhow::{anyhow, Result};
+
+async fn get_study_root_by_id(client: &reqwest::Client, id: &str) -> Result<model::study::Root> {
+    let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
+    tracing::info!("study_url: {}", study_url);
+
+    let root = client
+        .get(study_url)
+        .send()
+        .await?
+        .json::<model::study::Root>()
+        .await?;
+
+    Ok(root)
+}
+
+async fn get_protocol_section_by_study_root(
+    study_root: &model::study::Root,
+) -> Result<&model::study::ProtocolSection> {
+    study_root
+        .study
+        .as_ref()
+        .map(|study| study.protocol_section.as_ref())
+        .and_then(|protocol_section| protocol_section)
+        .ok_or(anyhow!("no protocol_section"))
+}
+
+async fn get_eligibility_criteria_by_protocol_section(
+    protocol_section: &model::study::ProtocolSection,
+) -> String {
+    protocol_section
+        .eligibility_module
+        .as_ref()
+        .and_then(|eligibility_module| eligibility_module.eligibility_criteria.as_deref())
+        .unwrap_or("")
+        .to_lowercase()
+}
+
+async fn get_inclusion_criteria_and_exclusion_criteria_by_eligibility_criteria(
+    eligibility_criteria: &str,
+) -> (&str, &str) {
+    let eligibility_criteria_split = eligibility_criteria
+        .split("Exclusion Criteria:")
+        .collect::<Vec<&str>>();
+
+    if eligibility_criteria_split.len() == 2 {
+        (eligibility_criteria_split[0], eligibility_criteria_split[1])
+    } else {
+        (eligibility_criteria, "")
+    }
+}
+
+async fn is_some_text_include_keywords(some_text: &str, keywords: &[String]) -> bool {
+    keywords.iter().any(|k| some_text.contains(k))
+}
+
 pub async fn build_csv_item(
     client: &reqwest::Client,
-    config: &crate::model::config::Config,
-    hit: &crate::model::search::Hit,
-) -> Option<crate::model::csv_item::CsvItem> {
+    config: &model::config::Config,
+    hit: &model::search::Hit,
+) -> Option<model::csv_item::CsvItem> {
     let mut add_to_result = false;
 
     let id = if let Some(id) = hit.id.as_deref() {
@@ -16,66 +73,62 @@ pub async fn build_csv_item(
     }
 
     // study
-    let study_url = format!("https://www.clinicaltrials.gov/api/int/studies/{}", id);
-    tracing::info!("study_url: {}", study_url);
-    let send_result = match client.get(study_url).send().await {
-        Ok(response) => response,
+    let study_root = match get_study_root_by_id(client, &id).await {
+        Ok(study_root) => study_root,
         Err(e) => {
-            tracing::info!("{:#?}", e);
-            return None;
-        }
-    };
-    let study = match send_result.json::<crate::model::study::Root>().await {
-        Ok(json) => json,
-        Err(e) => {
-            tracing::info!("{:#?}", e);
+            tracing::error!("{}", e);
             return None;
         }
     };
 
     // protocol_section
-    let protocol_section = if let Some(study) = &study.study {
-        if let Some(protocol_section) = &study.protocol_section {
-            protocol_section
-        } else {
+    let protocol_section = match get_protocol_section_by_study_root(&study_root).await {
+        Ok(study_root) => study_root,
+        Err(e) => {
+            tracing::error!("{}", e);
             return None;
         }
-    } else {
-        return None;
     };
 
     // eligibility_criteria
-    let eligibility_criteria = protocol_section
-        .eligibility_module
-        .as_ref()
-        .and_then(|eligibility_module| eligibility_module.eligibility_criteria.as_deref())
-        .unwrap_or("")
-        .to_lowercase();
-    let eligibility_criteria_split = eligibility_criteria
-        .split("Exclusion Criteria:")
-        .collect::<Vec<&str>>();
-    let (inclusion_criteria, exclusion_criteria) = if eligibility_criteria_split.len() == 2 {
-        (eligibility_criteria_split[0], eligibility_criteria_split[1])
-    } else {
-        (eligibility_criteria.as_str(), "")
-    };
+    let eligibility_criteria = get_eligibility_criteria_by_protocol_section(protocol_section).await;
+
+    // inclusion_criteria, exclusion_criteria
+    let (inclusion_criteria, exclusion_criteria) =
+        get_inclusion_criteria_and_exclusion_criteria_by_eligibility_criteria(
+            &eligibility_criteria,
+        )
+        .await;
 
     // inclusion_criteria filter
     if config.keywords_in_inclusion {
-        add_to_result = config
-            .keywords
-            .iter()
-            .any(|k| inclusion_criteria.contains(k))
-            || add_to_result;
+        add_to_result = add_to_result
+            || is_some_text_include_keywords(inclusion_criteria, &config.keywords).await;
     }
 
     // exclusion_criteria filter
     if config.keywords_in_exclusion {
-        add_to_result = config
-            .keywords
-            .iter()
-            .any(|k| exclusion_criteria.contains(k))
-            || add_to_result;
+        add_to_result = add_to_result
+            || is_some_text_include_keywords(exclusion_criteria, &config.keywords).await;
+    }
+
+    // conditions
+    let conditions = protocol_section
+        .conditions_module
+        .as_ref()
+        .and_then(|x| x.conditions.as_ref())
+        .map(|conditions| conditions.join(","))
+        .unwrap_or("-".to_string());
+
+    // conditions filter
+    if config.keywords_in_conditions {
+        add_to_result =
+            add_to_result || is_some_text_include_keywords(&conditions, &config.keywords).await;
+    }
+
+    tracing::info!("match: {}", add_to_result);
+    if !add_to_result {
+        return None;
     }
 
     // sponsor
@@ -127,19 +180,6 @@ pub async fn build_csv_item(
         })
         .unwrap_or("-");
 
-    // conditions
-    let conditions = protocol_section
-        .conditions_module
-        .as_ref()
-        .and_then(|x| x.conditions.as_ref())
-        .map(|conditions| conditions.join(","))
-        .unwrap_or("-".to_string());
-
-    // conditions filter
-    if config.keywords_in_conditions {
-        add_to_result = config.keywords.iter().any(|k| conditions.contains(k)) || add_to_result;
-    }
-
     // drug
     let drug = protocol_section
         .arms_interventions_module
@@ -161,7 +201,7 @@ pub async fn build_csv_item(
         })
         .unwrap_or("".to_string());
 
-    let csv_item = crate::model::csv_item::CsvItem {
+    let csv_item = model::csv_item::CsvItem {
         id,
         sponsor: sponsor.to_string(),
         start_date: start_date.to_string(),
@@ -172,11 +212,5 @@ pub async fn build_csv_item(
         drug,
     };
 
-    tracing::info!("match: {}", add_to_result);
-
-    if add_to_result {
-        return Some(csv_item);
-    }
-
-    None
+    Some(csv_item)
 }
