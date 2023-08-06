@@ -32,7 +32,7 @@ pub async fn run() -> Result<()> {
     let hits_set_len = hits_set.len();
 
     let mut tasks = Vec::with_capacity(hits_set_len);
-    let tokio_task_slepp = config.tokio_task_sleep.unwrap_or(200);
+    let tokio_task_sleep = config.tokio_task_sleep.unwrap_or(200);
     let mut task_spawn_count = 0;
     for hit in hits_set {
         let client = client.clone();
@@ -46,7 +46,7 @@ pub async fn run() -> Result<()> {
             hits_set_len,
             (task_spawn_count as f32 / hits_set_len as f32) * 100.0f32
         );
-        tokio::time::sleep(tokio::time::Duration::from_millis(tokio_task_slepp)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(tokio_task_sleep)).await;
     }
 
     let mut results = Vec::with_capacity(hits_set_len);
