@@ -79,49 +79,39 @@ pub async fn build_csv_item(
     }
 
     // sponsor
-    let sponsor = match &protocol_section.sponsor_collaborators_module {
-        Some(sponsor_collaborators_module) => match &sponsor_collaborators_module.lead_sponsor {
-            Some(lead_sponsor) => match &lead_sponsor.name {
-                Some(name) => name,
-                None => "-",
-            },
-            None => "-",
-        },
-        None => "-",
-    };
+    let sponsor = protocol_section
+        .sponsor_collaborators_module
+        .as_ref()
+        .and_then(|sponsor_collaborators_module| sponsor_collaborators_module.lead_sponsor.as_ref())
+        .and_then(|lead_sponsor| lead_sponsor.name.as_ref())
+        .map(|name| name.as_str())
+        .unwrap_or("-");
 
     // start_date
-    let start_date = match &protocol_section.status_module {
-        Some(status_module) => match &status_module.start_date_struct {
-            Some(start_date_struct) => match &start_date_struct.date {
-                Some(date) => date,
-                None => "-",
-            },
-            None => "-",
-        },
-        None => "-",
-    };
+    let start_date = protocol_section
+        .status_module
+        .as_ref()
+        .and_then(|status_module| status_module.start_date_struct.as_ref())
+        .and_then(|start_date_struct| start_date_struct.date.as_ref())
+        .map(|date| date.as_str())
+        .unwrap_or("-");
 
     // completion_date
-    let completion_date = match &protocol_section.status_module {
-        Some(status_module) => match &status_module.completion_date_struct {
-            Some(completion_date_struct) => match &completion_date_struct.date {
-                Some(date) => date,
-                None => "-",
-            },
-            None => "-",
-        },
-        None => "-",
-    };
+    let completion_date = protocol_section
+        .status_module
+        .as_ref()
+        .and_then(|status_module| status_module.completion_date_struct.as_ref())
+        .and_then(|completion_date_struct| completion_date_struct.date.as_ref())
+        .map(|date| date.as_str())
+        .unwrap_or("-");
 
     // status
-    let status = match &protocol_section.status_module {
-        Some(status_module) => match &status_module.overall_status {
-            Some(overall_status) => overall_status,
-            None => "-",
-        },
-        None => "-",
-    };
+    let status = protocol_section
+        .status_module
+        .as_ref()
+        .and_then(|status_module| status_module.overall_status.as_ref())
+        .map(|overall_status| overall_status.as_str())
+        .unwrap_or("-");
 
     // phase
     let phase = match &protocol_section.design_module {
