@@ -114,28 +114,26 @@ pub async fn build_csv_item(
         .unwrap_or("-");
 
     // phase
-    let phase = match &protocol_section.design_module {
-        Some(design_module) => match &design_module.phases {
-            Some(phases) => {
-                if phases.is_empty() {
-                    "-"
-                } else {
-                    &phases[0]
-                }
+    let phase = protocol_section
+        .design_module
+        .as_ref()
+        .and_then(|design_module| design_module.phases.as_ref())
+        .map(|phases| {
+            if phases.is_empty() {
+                "-"
+            } else {
+                phases[0].as_ref()
             }
-            None => "-",
-        },
-        None => "-",
-    };
+        })
+        .unwrap_or("-");
 
     // conditions
-    let conditions = match &protocol_section.conditions_module {
-        Some(conditions_module) => match &conditions_module.conditions {
-            Some(conditions) => conditions.join(","),
-            None => "-".to_string(),
-        },
-        None => "-".to_string(),
-    };
+    let conditions = protocol_section
+        .conditions_module
+        .as_ref()
+        .and_then(|x| x.conditions.as_ref())
+        .map(|conditions| conditions.join(","))
+        .unwrap_or("-".to_string());
 
     // conditions filter
     if config.keywords_in_conditions {
